@@ -5,10 +5,10 @@
 HTTP                                                     A. Backman, Ed.
 Internet-Draft                                                    Amazon
 Intended status: Standards Track                               J. Richer
-Expires: 16 March 2023                               Bespoke Engineering
+Expires: 23 March 2023                               Bespoke Engineering
                                                                M. Sporny
                                                           Digital Bazaar
-                                                       12 September 2022
+                                                       19 September 2022
 
 
                         HTTP Message Signatures
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 March 2023.
+   This Internet-Draft will expire on 23 March 2023.
 
 Copyright Notice
 
@@ -85,18 +85,18 @@ Table of Contents
        2.1.2.  Dictionary Structured Field Members
        2.1.3.  Binary-wrapped HTTP Fields
      2.2.  Derived Components
-       2.2.1.  Signature Parameters
-       2.2.2.  Method
-       2.2.3.  Target URI
-       2.2.4.  Authority
-       2.2.5.  Scheme
-       2.2.6.  Request Target
-       2.2.7.  Path
-       2.2.8.  Query
-       2.2.9.  Query Parameters
-       2.2.10. Status Code
-     2.3.  Request-Response Signature Binding
-     2.4.  Creating the Signature Base
+       2.2.1.  Method
+       2.2.2.  Target URI
+       2.2.3.  Authority
+       2.2.4.  Scheme
+       2.2.5.  Request Target
+       2.2.6.  Path
+       2.2.7.  Query
+       2.2.8.  Query Parameters
+       2.2.9.  Status Code
+     2.3.  Signature Parameters
+     2.4.  Request-Response Signature Binding
+     2.5.  Creating the Signature Base
    3.  HTTP Message Signatures
      3.1.  Creating a Signature
      3.2.  Verifying a Signature
@@ -156,6 +156,7 @@ Table of Contents
      7.23. Non-List Field Values
      7.24. Padding Attacks with Multiple Field Values
      7.25. Cross-Application Signature Context
+     7.26. Message Component Context
    8.  Privacy Considerations
      8.1.  Identification through Keys
      8.2.  Signatures do not provide confidentiality
@@ -449,7 +450,7 @@ Table of Contents
    specify all of the following items:
 
    *  The set of component identifiers (Section 2) and signature
-      parameters (Section 2.2.1) that are expected and required to be
+      parameters (Section 2.3) that are expected and required to be
       included in the covered components list.  For example, an
       authorization protocol could mandate that the Authorization field
       be covered to protect the authorization credentials and mandate
@@ -461,14 +462,14 @@ Table of Contents
 
    *  A means of retrieving the key material used to verify the
       signature.  An application will usually use the keyid parameter of
-      the signature parameters (Section 2.2.1) and define rules for
+      the signature parameters (Section 2.3) and define rules for
       resolving a key from there, though the appropriate key could be
       known from other means such as pre-registration of a signer's key.
 
    *  A means of determining the signature algorithm used to verify the
       signature is appropriate for the key material.  For example, the
       process could use the alg parameter of the signature parameters
-      (Section 2.2.1) to state the algorithm explicitly, derive the
+      (Section 2.3) to state the algorithm explicitly, derive the
       algorithm from the key material, or use some pre-configured
       algorithm agreed upon by the signer and verifier.
 
@@ -478,17 +479,23 @@ Table of Contents
       reject any RSA signatures, or a server expecting asymmetric
       cryptography should know to reject any symmetric cryptography.
 
+   *  A means of determining the context for derivation of message
+      components from an HTTP message and its application context.
+      While this is normally the target HTTP message itself, the context
+      could include additional information known to the application,
+      such as an external host name.
+
    When choosing these parameters, an application of HTTP message
    signatures has to ensure that the verifier will have access to all
    required information needed to re-create the signature base.  For
    example, a server behind a reverse proxy would need to know the
    original request URI to make use of the derived component @target-
    uri, even though the apparent target URI would be changed by the
-   reverse proxy.  Additionally, an application using signatures in
-   responses would need to ensure that clients receiving signed
-   responses have access to all the signed portions of the message,
-   including any portions of the request that were signed by the server
-   using the related-response parameter.
+   reverse proxy (see also Section 7.26).  Additionally, an application
+   using signatures in responses would need to ensure that clients
+   receiving signed responses have access to all the signed portions of
+   the message, including any portions of the request that were signed
+   by the server using the related-response parameter.
 
    The details of this kind of profiling are the purview of the
    application and outside the scope of this specification, however some
@@ -501,9 +508,12 @@ Table of Contents
    identifiers for components covered by an HTTP Message Signature, a
    set of rules for deriving and canonicalizing the values associated
    with these component identifiers from the HTTP Message, and the means
-   for combining these canonicalized values into a signature base.  The
-   context for deriving these values MUST be accessible to both the
-   signer and the verifier of the message.
+   for combining these canonicalized values into a signature base.
+
+   The context for deriving these values MUST be accessible to both the
+   signer and the verifier of the message.  The context MUST be
+   consistent across all components.  For more considerations of the
+   message component context, see Section 7.26.
 
    A component identifier is composed of a component name and any
    parameters associated with that name.  Each component name is either
@@ -540,7 +550,7 @@ Table of Contents
    The following sections define component identifier names, their
    parameters, their associated values, and the canonicalization rules
    for their values.  The method for combining message components into
-   the signature base is defined in Section 2.4.
+   the signature base is defined in Section 2.5.
 
 2.1.  HTTP Fields
 
@@ -556,7 +566,7 @@ Table of Contents
    of field values in this manner such that the combined output is
    unambiguous from multiple inputs.  However, the canonicalized
    component value is never parsed by the message signature process,
-   merely used as part of the signature base in Section 2.4.  Even so,
+   merely used as part of the signature base in Section 2.5.  Even so,
    caution needs to be taken when including such fields in signatures,
    and the bs parameter defined in Section 2.1.3 provides a method for
    wrapping such problematic fields.  See Section 7.23 for more
@@ -607,7 +617,7 @@ Table of Contents
 
    The following example shows canonicalized values for these example
    header fields, presented using the signature base format discussed in
-   Section 2.4:
+   Section 2.5:
 
    "host": www.example.com
    "date": Tue, 20 Apr 2021 02:07:56 GMT
@@ -625,7 +635,7 @@ Table of Contents
    X-Empty-Header: \
 
    Is serialized by the signature base generation algorithm
-   (Section 2.4) with an empty string value following the colon and
+   (Section 2.5) with an empty string value following the colon and
    space added after the content identifier.
 
    NOTE: '\' line wrapping per RFC 8792
@@ -655,7 +665,7 @@ Table of Contents
       component value is derived from the request that triggered this
       response message and not from the response message directly.  Note
       that this parameter can also be applied to any derived component
-      identifiers that target the request.  Section 2.3
+      identifiers that target the request.  Section 2.4
 
    Multiple parameters MAY be specified together, though some
    combinations are redundant or incompatible.  For example, the sf
@@ -737,7 +747,7 @@ Table of Contents
 
    The following example shows canonicalized values for different
    component identifiers of this field, presented using the signature
-   base format discussed in Section 2.4:
+   base format discussed in Section 2.5:
 
    "example-dict";key="a": 1
    "example-dict";key="d": ?1
@@ -834,30 +844,27 @@ Table of Contents
 
    This specification defines the following derived components:
 
-   @signature-params  The signature metadata parameters for this
-      signature.  (Section 2.2.1)
+   @method  The method used for a request.  (Section 2.2.1)
 
-   @method  The method used for a request.  (Section 2.2.2)
-
-   @target-uri  The full target URI for a request.  (Section 2.2.3)
+   @target-uri  The full target URI for a request.  (Section 2.2.2)
 
    @authority  The authority of the target URI for a request.
-      (Section 2.2.4)
+      (Section 2.2.3)
 
-   @scheme  The scheme of the target URI for a request.  (Section 2.2.5)
+   @scheme  The scheme of the target URI for a request.  (Section 2.2.4)
 
-   @request-target  The request target.  (Section 2.2.6)
+   @request-target  The request target.  (Section 2.2.5)
 
    @path  The absolute path portion of the target URI for a request.
-      (Section 2.2.7)
+      (Section 2.2.6)
 
    @query  The query portion of the target URI for a request.
-      (Section 2.2.8)
+      (Section 2.2.7)
 
    @query-param  A parsed query parameter of the target URI for a
-      request.  (Section 2.2.9)
+      request.  (Section 2.2.8)
 
-   @status  The status code for a response.  (Section 2.2.10).
+   @status  The status code for a response.  (Section 2.2.9).
 
    Additional derived component names are defined in the HTTP Signatures
    Derived Component Name Registry.  (Section 6.3)
@@ -868,13 +875,13 @@ Table of Contents
    additional state and context held by the signer.  In particular, when
    signing a response, the signer can include any derived components
    from the originating request by using the request-response signature
-   binding parameter (Section 2.3).
+   binding parameter (Section 2.4).
 
    request:  Values derived from and results applied to an HTTP request
       message as described in Section 3.4 of [HTTP].  If the target
       message of the signature is a response, using the req parameter
       allows a request-targeted derived component to be included in the
-      signature (see Section 2.3).
+      signature (see Section 2.4).
 
    response:  Values derived from and results applied to an HTTP
       response message as described in Section 3.4 of [HTTP].
@@ -886,101 +893,7 @@ Table of Contents
    spaces and MUST NOT contain any newline characters.  Derived
    component values MUST NOT start or end with whitespace characters.
 
-2.2.1.  Signature Parameters
-
-   HTTP Message Signatures have metadata properties that provide
-   information regarding the signature's generation and verification,
-   consisting of the ordered set of covered components and the ordered
-   set of parameters including a timestamp of signature creation,
-   identifiers for verification key material, and other utilities.  This
-   metadata is represented by a special derived component for signature
-   parameters, and it is treated slightly differently from other derived
-   components.  Specifically, the signature parameters message component
-   is REQUIRED as the last line of the signature base (Section 2.4), and
-   the component identifier MUST NOT be enumerated within the set of
-   covered components for any signature, including itself.
-
-   The signature parameters component name is @signature-params.
-
-   The signature parameters component value is the serialization of the
-   signature parameters for this signature, including the covered
-   components ordered set with all associated parameters.  These
-   parameters include any of the following:
-
-   *  created: Creation time as an Integer UNIX timestamp value.  Sub-
-      second precision is not supported.  Inclusion of this parameter is
-      RECOMMENDED.
-
-   *  expires: Expiration time as an Integer UNIX timestamp value.  Sub-
-      second precision is not supported.
-
-   *  nonce: A random unique value generated for this signature as a
-      String value.
-
-   *  alg: The HTTP message signature algorithm from the HTTP Message
-      Signature Algorithm Registry, as a String value.
-
-   *  keyid: The identifier for the key material as a String value.
-
-   *  context: An application-specific context for the signature as a
-      String value.  This value is used by applications to help identify
-      signatures relevant for specific applications or protocols.
-
-   Additional parameters can be defined in the HTTP Signature Parameters
-   Registry (Section 6.2.2).  Note that there is no general ordering to
-   the parameters, but once an ordering is chosen for a given set of
-   parameters, it cannot be changed without altering the signature
-   parameters value.
-
-   The signature parameters component value is serialized as a
-   parameterized Inner List using the rules in Section 4 of
-   [STRUCTURED-FIELDS] as follows:
-
-   1.  Let the output be an empty string.
-
-   2.  Determine an order for the component identifiers of the covered
-       components, not including the @signature-params component
-       identifier itself.  Once this order is chosen, it cannot be
-       changed.  This order MUST be the same order as used in creating
-       the signature base (Section 2.4).
-
-   3.  Serialize the component identifiers of the covered components,
-       including all parameters, as an ordered Inner List of String
-       values according to Section 4.1.1.1 of [STRUCTURED-FIELDS] and
-       append this to the output.  Note that the component identifiers
-       can include their own parameters, and these parameters are
-       ordered sets.  Once an order is chosen for a component's
-       parameters, the order cannot be changed.
-
-   4.  Determine an order for any signature parameters.  Once this order
-       is chosen, it cannot be changed.
-
-   5.  Append the parameters to the Inner List in order according to
-       Section 4.1.1.2 of [STRUCTURED-FIELDS], skipping parameters that
-       are not available or not used for this message signature.
-
-   6.  The output contains the signature parameters component value.
-
-   Note that the Inner List serialization from Section 4.1.1.1 of
-   [STRUCTURED-FIELDS] is used for the covered component value instead
-   of the List serialization from Section 4.1.1 of [STRUCTURED-FIELDS]
-   in order to facilitate parallelism with this value's inclusion in the
-   Signature-Input field, as discussed in Section 4.1.
-
-   This example shows the serialized component value for the parameters
-   of an example message signature:
-
-   NOTE: '\' line wrapping per RFC 8792
-
-   ("@target-uri" "@authority" "date" "cache-control")\
-     ;keyid="test-key-rsa-pss";alg="rsa-pss-sha512";\
-     created=1618884475;expires=1618884775
-
-   Note that an HTTP message could contain multiple signatures
-   (Section 4.3), but only the signature parameters used for a single
-   signature are included in a given signature parameters entry.
-
-2.2.2.  Method
+2.2.1.  Method
 
    The @method derived component refers to the HTTP method of a request
    message.  The component value is canonicalized by taking the value of
@@ -1001,7 +914,7 @@ Table of Contents
 
    "@method": POST
 
-2.2.3.  Target URI
+2.2.2.  Target URI
 
    The @target-uri derived component refers to the target URI of a
    request message.  The component value is the full absolute target URI
@@ -1022,7 +935,7 @@ Table of Contents
 
    "@target-uri": https://www.example.com/path?param=value
 
-2.2.4.  Authority
+2.2.3.  Authority
 
    The @authority derived component refers to the authority component of
    the target URI of the HTTP request message, as defined in [HTTP],
@@ -1051,7 +964,7 @@ Table of Contents
    The @authority derived component SHOULD be used instead of signing
    the Host header directly, see Section 7.20.
 
-2.2.5.  Scheme
+2.2.4.  Scheme
 
    The @scheme derived component refers to the scheme of the target URL
    of the HTTP request message.  The component value is the scheme as a
@@ -1072,7 +985,7 @@ Table of Contents
 
    "@scheme": http
 
-2.2.6.  Request Target
+2.2.5.  Request Target
 
    The @request-target derived component refers to the full request
    target of the HTTP request message, as defined in [HTTP],
@@ -1142,7 +1055,7 @@ Table of Contents
 
    "@request-target": *
 
-2.2.7.  Path
+2.2.6.  Path
 
    The @path derived component refers to the target path of the HTTP
    request message.  The component value is the absolute path of the
@@ -1165,7 +1078,7 @@ Table of Contents
 
    "@path": /path
 
-2.2.8.  Query
+2.2.7.  Query
 
    The @query derived component refers to the query component of the
    HTTP request message.  The component value is the entire normalized
@@ -1208,7 +1121,7 @@ Table of Contents
 
    "@query": ?
 
-2.2.9.  Query Parameters
+2.2.8.  Query Parameters
 
    If a request target URI uses HTML form parameters in the query string
    as defined in HTMLURL, Section 5 [HTMLURL], the @query-param derived
@@ -1263,9 +1176,9 @@ Table of Contents
    not stable, and this situation could lead to unexpected results.  If
    multiple parameters are common within an application, it is
    RECOMMENDED to sign the entire query string using the @query
-   component identifier defined in Section 2.2.8.
+   component identifier defined in Section 2.2.7.
 
-2.2.10.  Status Code
+2.2.9.  Status Code
 
    The @status derived component refers to the three-digit numeric HTTP
    status code of a response message as defined in [HTTP], Section 15.
@@ -1288,7 +1201,101 @@ Table of Contents
    The @status component identifier MUST NOT be used in a request
    message.
 
-2.3.  Request-Response Signature Binding
+2.3.  Signature Parameters
+
+   HTTP Message Signatures have metadata properties that provide
+   information regarding the signature's generation and verification,
+   consisting of the ordered set of covered components and the ordered
+   set of parameters including a timestamp of signature creation,
+   identifiers for verification key material, and other utilities.  This
+   metadata is represented by a special derived component for signature
+   parameters, and it is treated slightly differently from other derived
+   components.  Specifically, the signature parameters message component
+   is REQUIRED as the last line of the signature base (Section 2.5), and
+   the component identifier MUST NOT be enumerated within the set of
+   covered components for any signature, including itself.
+
+   The signature parameters component name is @signature-params.
+
+   The signature parameters component value is the serialization of the
+   signature parameters for this signature, including the covered
+   components ordered set with all associated parameters.  These
+   parameters include any of the following:
+
+   *  created: Creation time as an Integer UNIX timestamp value.  Sub-
+      second precision is not supported.  Inclusion of this parameter is
+      RECOMMENDED.
+
+   *  expires: Expiration time as an Integer UNIX timestamp value.  Sub-
+      second precision is not supported.
+
+   *  nonce: A random unique value generated for this signature as a
+      String value.
+
+   *  alg: The HTTP message signature algorithm from the HTTP Message
+      Signature Algorithm Registry, as a String value.
+
+   *  keyid: The identifier for the key material as a String value.
+
+   *  context: An application-specific context for the signature as a
+      String value.  This value is used by applications to help identify
+      signatures relevant for specific applications or protocols.
+
+   Additional parameters can be defined in the HTTP Signature Parameters
+   Registry (Section 6.2.2).  Note that there is no general ordering to
+   the parameters, but once an ordering is chosen for a given set of
+   parameters, it cannot be changed without altering the signature
+   parameters value.
+
+   The signature parameters component value is serialized as a
+   parameterized Inner List using the rules in Section 4 of
+   [STRUCTURED-FIELDS] as follows:
+
+   1.  Let the output be an empty string.
+
+   2.  Determine an order for the component identifiers of the covered
+       components, not including the @signature-params component
+       identifier itself.  Once this order is chosen, it cannot be
+       changed.  This order MUST be the same order as used in creating
+       the signature base (Section 2.5).
+
+   3.  Serialize the component identifiers of the covered components,
+       including all parameters, as an ordered Inner List of String
+       values according to Section 4.1.1.1 of [STRUCTURED-FIELDS] and
+       append this to the output.  Note that the component identifiers
+       can include their own parameters, and these parameters are
+       ordered sets.  Once an order is chosen for a component's
+       parameters, the order cannot be changed.
+
+   4.  Determine an order for any signature parameters.  Once this order
+       is chosen, it cannot be changed.
+
+   5.  Append the parameters to the Inner List in order according to
+       Section 4.1.1.2 of [STRUCTURED-FIELDS], skipping parameters that
+       are not available or not used for this message signature.
+
+   6.  The output contains the signature parameters component value.
+
+   Note that the Inner List serialization from Section 4.1.1.1 of
+   [STRUCTURED-FIELDS] is used for the covered component value instead
+   of the List serialization from Section 4.1.1 of [STRUCTURED-FIELDS]
+   in order to facilitate parallelism with this value's inclusion in the
+   Signature-Input field, as discussed in Section 4.1.
+
+   This example shows the serialized component value for the parameters
+   of an example message signature:
+
+   NOTE: '\' line wrapping per RFC 8792
+
+   ("@target-uri" "@authority" "date" "cache-control")\
+     ;keyid="test-key-rsa-pss";alg="rsa-pss-sha512";\
+     created=1618884475;expires=1618884775
+
+   Note that an HTTP message could contain multiple signatures
+   (Section 4.3), but only the signature parameters used for a single
+   signature are included in a given signature parameters entry.
+
+2.4.  Request-Response Signature Binding
 
    When a request message results in a signed response message, the
    signer can include portions of the request message in the signature
@@ -1398,20 +1405,20 @@ Table of Contents
    The req parameter MUST NOT be used in a signature that targets a
    request message.
 
-2.4.  Creating the Signature Base
+2.5.  Creating the Signature Base
 
    The signature base is a US-ASCII string containing the canonicalized
    HTTP message components covered by the signature.  The input to the
    signature base creation algorithm is the ordered set of covered
    component identifiers and their associated values, along with any
-   additional signature parameters discussed in Section 2.2.1.
+   additional signature parameters discussed in Section 2.3.
 
    Component identifiers are serialized using the production grammar
    defined by [STRUCTURED-FIELDS], Section 4.  The component identifier
    has a component name, which is a String Item value serialized using
    the sf-string ABNF rule.  The component identifier MAY also include
    defined parameters which are serialized using the parameters ABNF
-   rule.  The signature parameters line defined in Section 2.2.1 follows
+   rule.  The signature parameters line defined in Section 2.3 follows
    this same pattern, but the component identifier is a String Item with
    a fixed value and no parameters, and the component value is always an
    Inner List with optional parameters.
@@ -1489,8 +1496,8 @@ Table of Contents
 
        6.  Append a single newline \n
 
-   3.  Append the signature parameters component (Section 2.2.1)
-       according to the signature-params-line rule as follows:
+   3.  Append the signature parameters component (Section 2.3) according
+       to the signature-params-line rule as follows:
 
        1.  Append the component identifier for the signature parameters
            serialized according to the component-identifier rule, i.e.
@@ -1501,7 +1508,7 @@ Table of Contents
        3.  Append a single space " "
 
        4.  Append the signature parameters' canonicalized component
-           value as defined in Section 2.2.1, i.e. an Inner List
+           value as defined in Section 2.3, i.e. an Inner List
            structured field value with parameters
 
    4.  Return the output string.
@@ -1646,7 +1653,7 @@ Table of Contents
           order is out of scope for this document.
 
    5.  The signer creates the signature base using these parameters and
-       the signature base creation algorithm.  (Section 2.4)
+       the signature base creation algorithm.  (Section 2.5)
 
    6.  The signer uses the HTTP_SIGN primitive function to sign the
        signature base with the chosen signing algorithm using the key
@@ -1659,7 +1666,7 @@ Table of Contents
        field as defined in Section 4.2.
 
    For example, given the HTTP message and signature parameters in the
-   example in Section 2.4, the example signature base is signed with the
+   example in Section 2.5, the example signature base is signed with the
    test-key-rsa-pss key in Appendix B.1.2 and the RSA PSS algorithm
    described in Section 3.3.1, giving the following message signature
    output value, encoded in Base64:
@@ -1751,11 +1758,11 @@ Table of Contents
 
    7.  Use the received HTTP message and the parsed signature parameters
        to re-create the signature base, using the algorithm defined in
-       Section 2.4.  The value of the @signature-params input is the
+       Section 2.5.  The value of the @signature-params input is the
        value of the Signature-Input field for this signature serialized
-       according to the rules described in Section 2.2.1.  Note that
-       this does not include the signature's label from the Signature-
-       Input field.
+       according to the rules described in Section 2.3.  Note that this
+       does not include the signature's label from the Signature-Input
+       field.
 
    8.  If the key material is appropriate for the algorithm, apply the
        appropriate HTTP_VERIFY cryptographic verification algorithm to
@@ -1858,13 +1865,13 @@ Table of Contents
    application of HTTP message signatures.
 
    Each signing method HTTP_SIGN takes as its input the signature base
-   defined in Section 2.4 as a byte array (M), the signing key material
+   defined in Section 2.5 as a byte array (M), the signing key material
    (Ks), and outputs the signature output as a byte array (S):
 
    HTTP_SIGN (M, Ks)  ->  S
 
    Each verification method HTTP_VERIFY takes as its input the re-
-   generated signature base defined in Section 2.4 as a byte array (M),
+   generated signature base defined in Section 2.5 as a byte array (M),
    the verification key material (Kv), and the presented signature to be
    verified as a byte array (S) and outputs the verification result (V)
    as a boolean:
@@ -1875,7 +1882,7 @@ Table of Contents
    and demonstrates how these cryptographic primitives map to the
    HTTP_SIGN and HTTP_VERIFY definitions here.  Which method to use can
    be communicated through the explicit algorithm signature parameter
-   alg defined in Section 2.2.1, by reference to the key material, or
+   alg defined in Section 2.3, by reference to the key material, or
    through mutual agreement between the signer and verifier.  Signature
    algorithms selected using the alg parameter MUST use values from the
    HTTP Message Signature Algorithms Registry (Section 6.1).
@@ -1884,7 +1891,7 @@ Table of Contents
 
    To sign using this algorithm, the signer applies the RSASSA-PSS-SIGN
    (K, M) function defined in [RFC8017] with the signer's private
-   signing key (K) and the signature base (M) (Section 2.4).  The mask
+   signing key (K) and the signature base (M) (Section 2.5).  The mask
    generation function is MGF1 as specified in [RFC8017] with a hash
    function of SHA-512 [RFC6234].  The salt length (sLen) is 64 bytes.
    The hash function (Hash) SHA-512 [RFC6234] is applied to the
@@ -1918,7 +1925,7 @@ Table of Contents
    To sign using this algorithm, the signer applies the RSASSA-
    PKCS1-V1_5-SIGN (K, M) function defined in [RFC8017] with the
    signer's private signing key (K) and the signature base (M)
-   (Section 2.4).  The hash SHA-256 [RFC6234] is applied to the
+   (Section 2.5).  The hash SHA-256 [RFC6234] is applied to the
    signature base to create the digest content to which the digital
    signature is applied.  The resulting signed content byte array (S) is
    the HTTP message signature output used in Section 3.1.
@@ -1940,7 +1947,7 @@ Table of Contents
 
    To sign and verify using this algorithm, the signer applies the HMAC
    function [RFC2104] with the shared signing key (K) and the signature
-   base (text) (Section 2.4).  The hash function SHA-256 [RFC6234] is
+   base (text) (Section 2.5).  The hash function SHA-256 [RFC6234] is
    applied to the signature base to create the digest content to which
    the HMAC is applied, giving the signature result.
 
@@ -1960,7 +1967,7 @@ Table of Contents
 
    To sign using this algorithm, the signer applies the ECDSA algorithm
    defined in [FIPS186-4] using curve P-256 with the signer's private
-   signing key and the signature base (Section 2.4).  The hash SHA-256
+   signing key and the signature base (Section 2.5).  The hash SHA-256
    [RFC6234] is applied to the signature base to create the digest
    content to which the digital signature is applied, (M).  The
    signature algorithm returns two integer values, r and s.  These are
@@ -1997,7 +2004,7 @@ Table of Contents
 
    To sign using this algorithm, the signer applies the ECDSA algorithm
    defined in [FIPS186-4] using curve P-384 with the signer's private
-   signing key and the signature base (Section 2.4).  The hash SHA-384
+   signing key and the signature base (Section 2.5).  The hash SHA-384
    [RFC6234] is applied to the signature base to create the digest
    content to which the digital signature is applied, (M).  The
    signature algorithm returns two integer values, r and s.  These are
@@ -2034,7 +2041,7 @@ Table of Contents
 
    To sign using this algorithm, the signer applies the Ed25519
    algorithm defined in Section 5.1.6 of [RFC8032] with the signer's
-   private signing key and the signature base (Section 2.4).  The
+   private signing key and the signature base (Section 2.5).  The
    signature base is taken as the input message (M) with no pre-hash
    function.  The signature is a 64-octet concatenation of R and S as
    specified in Section 5.1.6 of [RFC8032], and this is taken as a byte
@@ -2060,7 +2067,7 @@ Table of Contents
    hashing algorithms to apply for both signing and verification.
 
    For both signing and verification, the HTTP messages signature base
-   (Section 2.4) is used as the entire "JWS Signing Input".  The JOSE
+   (Section 2.5) is used as the entire "JWS Signing Input".  The JOSE
    Header defined in [RFC7517] is not used, and the signature base is
    not first encoded in Base64 before applying the algorithm.  The
    output of the JWS signature is taken as a byte array prior to the
@@ -2117,7 +2124,7 @@ Table of Contents
 
    To facilitate signature validation, the Signature-Input field value
    MUST contain the same serialized value used in generating the
-   signature base's @signature-params value defined in Section 2.2.1.
+   signature base's @signature-params value defined in Section 2.3.
    Note that in a structured field value, list order and parameter order
    have to be preserved.
 
@@ -2347,7 +2354,7 @@ Table of Contents
    target HTTP message.  The member's value is the serialization of the
    desired covered components of the target message, including any
    allowed signature metadata parameters, using the serialization
-   process defined in Section 2.2.1.
+   process defined in Section 2.3.
 
    NOTE: '\' line wrapping per RFC 8792
 
@@ -2494,7 +2501,7 @@ Table of Contents
 6.2.  HTTP Signature Metadata Parameters Registry
 
    This document defines the signature parameters structure in
-   Section 2.2.1, which may have parameters containing metadata about a
+   Section 2.3, which may have parameters containing metadata about a
    message signature.  IANA is asked to create and maintain a new
    registry titled "HTTP Signature Metadata Parameters" to record and
    maintain the set of parameters defined for use with member values in
@@ -2533,23 +2540,23 @@ Table of Contents
         | Name    | Description                   | Specification |
         |         |                               | document(s)   |
         +=========+===============================+===============+
-        | alg     | Explicitly declared signature | Section 2.2.1 |
+        | alg     | Explicitly declared signature | Section 2.3   |
         |         | algorithm                     | of RFC nnnn   |
         +---------+-------------------------------+---------------+
-        | created | Timestamp of signature        | Section 2.2.1 |
+        | created | Timestamp of signature        | Section 2.3   |
         |         | creation                      | of RFC nnnn   |
         +---------+-------------------------------+---------------+
-        | expires | Timestamp of proposed         | Section 2.2.1 |
+        | expires | Timestamp of proposed         | Section 2.3   |
         |         | signature expiration          | of RFC nnnn   |
         +---------+-------------------------------+---------------+
-        | keyid   | Key identifier for the        | Section 2.2.1 |
+        | keyid   | Key identifier for the        | Section 2.3   |
         |         | signing and verification keys | of RFC nnnn   |
         |         | used to create this signature |               |
         +---------+-------------------------------+---------------+
-        | nonce   | A single-use nonce value      | Section 2.2.1 |
+        | nonce   | A single-use nonce value      | Section 2.3   |
         |         |                               | of RFC nnnn   |
         +---------+-------------------------------+---------------+
-        | context | An application-specific       | Section 2.2.1 |
+        | context | An application-specific       | Section 2.3   |
         |         | context for a signature       | of RFC nnnn   |
         +---------+-------------------------------+---------------+
 
@@ -2610,46 +2617,46 @@ Table of Contents
    | Name              |Description  |Status| Target   |Specification  |
    |                   |             |      |          |document(s)    |
    +===================+=============+======+==========+===============+
-   | @signature-params |Reserved for |Active| Request, |Section 2.2.1  |
-   |                   |signature    |      | Response |of RFC nnnn    |
+   | @signature-params |Reserved for |Active| Request, |Section 2.3 of |
+   |                   |signature    |      | Response |RFC nnnn       |
    |                   |parameters   |      |          |               |
    |                   |line in      |      |          |               |
    |                   |signature    |      |          |               |
    |                   |base         |      |          |               |
    +-------------------+-------------+------+----------+---------------+
-   | @method           |The HTTP     |Active| Request  |Section 2.2.2  |
+   | @method           |The HTTP     |Active| Request  |Section 2.2.1  |
    |                   |request      |      |          |of RFC nnnn    |
    |                   |method       |      |          |               |
    +-------------------+-------------+------+----------+---------------+
-   | @authority        |The HTTP     |Active| Request  |Section 2.2.4  |
+   | @authority        |The HTTP     |Active| Request  |Section 2.2.3  |
    |                   |authority, or|      |          |of RFC nnnn    |
    |                   |target host  |      |          |               |
    +-------------------+-------------+------+----------+---------------+
-   | @scheme           |The URI      |Active| Request  |Section 2.2.5  |
+   | @scheme           |The URI      |Active| Request  |Section 2.2.4  |
    |                   |scheme of the|      |          |of RFC nnnn    |
    |                   |request URI  |      |          |               |
    +-------------------+-------------+------+----------+---------------+
-   | @target-uri       |The full     |Active| Request  |Section 2.2.3  |
+   | @target-uri       |The full     |Active| Request  |Section 2.2.2  |
    |                   |target URI of|      |          |of RFC nnnn    |
    |                   |the request  |      |          |               |
    +-------------------+-------------+------+----------+---------------+
-   | @request-target   |The request  |Active| Request  |Section 2.2.6  |
+   | @request-target   |The request  |Active| Request  |Section 2.2.5  |
    |                   |target of the|      |          |of RFC nnnn    |
    |                   |request      |      |          |               |
    +-------------------+-------------+------+----------+---------------+
-   | @path             |The full path|Active| Request  |Section 2.2.7  |
+   | @path             |The full path|Active| Request  |Section 2.2.6  |
    |                   |of the       |      |          |of RFC nnnn    |
    |                   |request URI  |      |          |               |
    +-------------------+-------------+------+----------+---------------+
-   | @query            |The full     |Active| Request  |Section 2.2.8  |
+   | @query            |The full     |Active| Request  |Section 2.2.7  |
    |                   |query of the |      |          |of RFC nnnn    |
    |                   |request URI  |      |          |               |
    +-------------------+-------------+------+----------+---------------+
-   | @query-param      |A single     |Active| Request  |Section 2.2.9  |
+   | @query-param      |A single     |Active| Request  |Section 2.2.8  |
    |                   |named query  |      |          |of RFC nnnn    |
    |                   |parameter    |      |          |               |
    +-------------------+-------------+------+----------+---------------+
-   | @status           |The status   |Active| Response |Section 2.2.10 |
+   | @status           |The status   |Active| Response |Section 2.2.9  |
    |                   |code of the  |      |          |of RFC nnnn    |
    |                   |response     |      |          |               |
    +-------------------+-------------+------+----------+---------------+
@@ -2715,10 +2722,10 @@ Table of Contents
      | bs   | Byte Sequence wrapping       | Active | Section 2.1.3 |
      |      | indicator                    |        | of RFC nnnn   |
      +------+------------------------------+--------+---------------+
-     | req  | Related request indicator    | Active | Section 2.2.5 |
+     | req  | Related request indicator    | Active | Section 2.2.4 |
      |      |                              |        | of RFC nnnn   |
      +------+------------------------------+--------+---------------+
-     | name | Single named query parameter | Active | Section 2.2.9 |
+     | name | Single named query parameter | Active | Section 2.2.8 |
      |      |                              |        | of RFC nnnn   |
      +------+------------------------------+--------+---------------+
 
@@ -2858,7 +2865,7 @@ Table of Contents
 
    While it is possible for an attacker to substitute the signature
    parameters value or the signature value separately, the signature
-   base generation algorithm (Section 2.4) always covers the signature
+   base generation algorithm (Section 2.5) always covers the signature
    parameters as the final value in the signature base using a
    deterministic serialization method.  This step strongly binds the
    signature base with the signature value in a way that makes it much
@@ -3027,7 +3034,7 @@ Table of Contents
 
    It is for this reason that HTTP Message Signatures defines a set of
    derived components that define a single way to get value in question,
-   such as the @authority derived component (Section 2.2.4) in lieu of
+   such as the @authority derived component (Section 2.2.3) in lieu of
    the Host header field.  Applications should therefore prefer derived
    components for such options where possible.
 
@@ -3124,7 +3131,7 @@ Table of Contents
    as a derived component and never taken as a fields.  Only if the
    component name does not start with the @ character can it be taken
    from the fields of the message.  The algorithm discussed in
-   Section 2.4 provides a safe order of operations.
+   Section 2.5 provides a safe order of operations.
 
 7.19.  Non-deterministic Signature Primitives
 
@@ -3163,13 +3170,13 @@ Table of Contents
 
    "host"  The "host" header field is specific to HTTP 1.1, and its
       functionality is subsumed by the "@authority" derived component,
-      defined in Section 2.2.4.  In order to preserve the value across
+      defined in Section 2.2.3.  In order to preserve the value across
       different HTTP versions, applications should always use the
       "@authority" derived component.  See also Section 7.14.
 
 7.21.  Semantically Equivalent Field Values
 
-   The signature base generation algorithm (Section 2.4) uses the value
+   The signature base generation algorithm (Section 2.5) uses the value
    of an HTTP field as its component value.  In the common case, this
    amounts to taking the actual bytes of the field value as the
    component value for both the signer and verifier.  However, some
@@ -3258,7 +3265,7 @@ Table of Contents
 
    When an HTTP field occurs multiple times in a single message, these
    values need to be combined into a single one-line string value to be
-   included in the HTTP signature base, as described in Section 2.4.
+   included in the HTTP signature base, as described in Section 2.5.
    Not all HTTP fields can be combined into a single value in this way
    and still be a valid value for the field.  For the purposes of
    generating the signature base, the message component value is never
@@ -3320,7 +3327,7 @@ Table of Contents
 
    Since HTTP field values need to be combined in a single string value
    to be included in the HTTP signature base, as described in
-   Section 2.4, it is possible for an attacker to inject an additional
+   Section 2.5, it is possible for an attacker to inject an additional
    value for a given field and add this to the signature base of the
    verifier.
 
@@ -3350,6 +3357,50 @@ Table of Contents
    context signature parameter.  For example, a signature targeting an
    application gateway could require context="app-gateway" as part of
    the signature parameters for that application.
+
+7.26.  Message Component Context
+
+   The context for deriving message component values includes the HTTP
+   Message itself, any associated messages (such as the request that
+   triggered a response), and additional information that the signer or
+   verifier has access to.  Both signers and verifiers need to take
+   carefully consider the source of all information when creating
+   component values for the signature base and take care not to take
+   information from untrusted sources.  Otherwise, an attacker could
+   leverage such a loosely-defined message context to inject their own
+   values into the signature base string, overriding or corrupting the
+   intended values.
+
+   For example, in most situations, the target URI of the message is
+   defined in [HTTP], Section 7.1.  However, let's say that there is an
+   application that requires signing of the @authority of the incoming
+   request, but the application doing the processing is behind a reverse
+   proxy.  Such an application would expect a change in the @authority
+   value, and it could be configured to know the external target URI as
+   seen by the client on the other side of the proxy.  This application
+   would use this configured value as its target URI for the purposes of
+   deriving message component values such as @authority instead of using
+   the target URI of the incoming message.
+
+   This approach is not without problems, as a misconfigured system
+   could accept signed requests intended for different components in the
+   system.  For this scenario, an intermediary could instead add its own
+   signature to be verified by the application directly, as demonstrated
+   in Section 4.3.  This alternative approach requires a more active
+   intermediary but relies less on the target application knowing
+   external configuration values.
+
+   For another example, Section 2.4 defines a method for signing
+   response messages but including portions of the request message that
+   triggered the response.  In this case, the context for component
+   value calculation is the combination of the response and request
+   message, not just the single message to which the signature is
+   applied.  For this feature, the req flag allows both signer to
+   explicitly signal which part of the context is being sourced for a
+   component identifier's value.  Implementations need to ensure that
+   only the intended message is being referred to for each component,
+   otherwise an attacker could attempt to subvert a signature by
+   manipulating one side or the other.
 
 8.  Privacy Considerations
 
@@ -4243,6 +4294,8 @@ Document History
          o  Added set of safe transformation examples.
 
          o  Added ECDSA over P-384.
+
+         o  Expanded definiton of message component source context.
 
       -  -11
 
