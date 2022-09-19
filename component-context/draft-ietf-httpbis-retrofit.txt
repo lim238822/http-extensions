@@ -3,9 +3,10 @@
 
 
 Network Working Group                                      M. Nottingham
-Internet-Draft                                         12 September 2022
+Internet-Draft                                         19 September 2022
+Updates: 8941 (if approved)                                             
 Intended status: Standards Track                                        
-Expires: 16 March 2023
+Expires: 23 March 2023
 
 
                   Retrofit Structured Fields for HTTP
@@ -20,6 +21,9 @@ Abstract
    To accommodate some additional fields whose syntax is not compatible,
    it also defines mappings of their semantics into new Structured
    Fields.  It does not specify how to negotiate their use.
+
+   One of those mappings requires introduction of a new Structured
+   Fields data type, Date.
 
 About This Document
 
@@ -51,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 March 2023.
+   This Internet-Draft will expire on 23 March 2023.
 
 Copyright Notice
 
@@ -81,6 +85,9 @@ Table of Contents
    4.  IANA Considerations
    5.  Security Considerations
    6.  Normative References
+   Appendix A.  The Date Structured Type
+     A.1.  Serialising a Date
+     A.2.  Parsing a Date
    Author's Address
 
 1.  Introduction
@@ -137,6 +144,9 @@ Table of Contents
    "OPTIONAL" in this document are to be interpreted as described in
    BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
+
+   This document uses the date-time, time-offset, and time-secfrac rules
+   from [RFC3339].
 
 2.  Compatible Fields
 
@@ -333,11 +343,9 @@ Table of Contents
 
    Date: Sun, 06 Nov 1994 08:49:37 GMT
 
-   Its value is more efficiently represented as an Integer number of
-   delta seconds from the Unix epoch (00:00:00 UTC on 1 January 1970,
-   minus leap seconds).  Thus, the example above would be mapped to:
+   Its value would be mapped to:
 
-   SF-Date: 784072177
+   SF-Date: @784111777
 
    As in Section 2, these fields are unable to carry values that are not
    valid Structured Fields, and so an application using this
@@ -379,7 +387,8 @@ Table of Contents
    have values that can be mapped into Structured Fields by parsing
    their payload according to Section 5.6.7 of [HTTP] and representing
    the result as an Integer number of seconds delta from the Unix Epoch
-   (00:00:00 UTC on 1 January 1970, excluding leap seconds).
+   (00:00:00 UTC on 1 January 1970, excluding leap seconds), using the
+   Date Structured Fields data type defined in Appendix A.
 
              +=====================+========================+
              | Field Name          | Mapped Field Name      |
@@ -399,7 +408,7 @@ Table of Contents
 
    For example, an Expires field could be mapped as:
 
-   SF-Expires: 1571965240
+   SF-Expires: @1659578233
 
 3.3.  ETags
 
@@ -465,7 +474,7 @@ Table of Contents
                    +----------------+-----------------+
                    | HttpOnly       | Boolean         |
                    +----------------+-----------------+
-                   | Expires        | Integer         |
+                   | Expires        | Date            |
                    +----------------+-----------------+
                    | Max-Age        | Integer         |
                    +----------------+-----------------+
@@ -478,10 +487,8 @@ Table of Contents
 
                    Table 4: Set-Cookie Parameter Types
 
-   The Expires attribute is mapped to an Integer representation of
-   parsed-cookie-date (see Section 5.1.1 of [COOKIES]) expressed as a
-   number of seconds delta from the Unix Epoch (00:00:00 UTC on 1
-   January 1970, excluding leap seconds).
+   The Expires attribute is mapped to a Date representation of parsed-
+   cookie-date (see Section 5.1.1 of [COOKIES]).
 
    For example, these unstructured fields:
 
@@ -491,7 +498,7 @@ Table of Contents
 
    can be mapped into:
 
-   SF-Set-Cookie: ("lang" "en-US"); expires=1623233894;
+   SF-Set-Cookie: ("lang" "en-US"); expires=@1623233894;
                   samesite=Strict; secure
    SF-Cookie: ("SID" "31d4d96e407aad42"), ("lang" "en-US")
 
@@ -622,6 +629,10 @@ Table of Contents
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
 
+   [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
+              Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
+              <https://www.rfc-editor.org/rfc/rfc3339>.
+
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
@@ -634,6 +645,51 @@ Table of Contents
               Nottingham, M. and P-H. Kamp, "Structured Field Values for
               HTTP", RFC 8941, DOI 10.17487/RFC8941, February 2021,
               <https://www.rfc-editor.org/rfc/rfc8941>.
+
+Appendix A.  The Date Structured Type
+
+   This section defines a new Structured Fields data type, Date.
+
+   Dates have a data model that is similar to Integers, representing a
+   (possibly negative) delta in seconds from January 1, 1970 00:00:00
+   UTC, excluding leap seconds.
+
+   The ABNF for Dates is:
+
+   sf-date = "@" ["-"] 1*15DIGIT
+
+   For example:
+
+   Example-Date: @1659578233
+
+A.1.  Serialising a Date
+
+   Given a Date as input_integer, return an ASCII string suitable for
+   use in an HTTP field value.
+
+   1.  Let output be "@".
+
+   2.  Append to output the result of running Serializing an Integer
+       with input_date (see Section 4.1.4 of [STRUCTURED-FIELDS]).
+
+   3.  Return output.
+
+A.2.  Parsing a Date
+
+   Given an ASCII string as input_string, return a Date. input_string is
+   modified to remove the parsed value.
+
+   1.  If the first character of input_string is not "@", fail parsing.
+
+   2.  Discard the first character of input_string.
+
+   3.  Let output_date be the result of running Parsing an Integer or
+       Decimal with input_string (see Section 4.2.4 of
+       [STRUCTURED-FIELDS]).
+
+   4.  If output_date is a Decimal, fail parsing.
+
+   5.  Return output_date.
 
 Author's Address
 
