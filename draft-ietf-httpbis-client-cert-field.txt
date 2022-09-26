@@ -5,8 +5,8 @@
 HTTP                                                         B. Campbell
 Internet-Draft                                             Ping Identity
 Intended status: Informational                            M. Bishop, Ed.
-Expires: 25 March 2023                                            Akamai
-                                                       21 September 2022
+Expires: 30 March 2023                                            Akamai
+                                                       26 September 2022
 
 
                      Client-Cert HTTP Header Field
@@ -50,7 +50,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 March 2023.
+   This Internet-Draft will expire on 30 March 2023.
 
 Copyright Notice
 
@@ -501,7 +501,7 @@ Table of Contents
               <https://www.rfc-editor.org/rfc/rfc7541>.
 
    [I-D.ietf-quic-qpack]
-              Krasic, C. '., Bishop, M., and A. Frindell, "QPACK: Field
+              Krasic, C. B., Bishop, M., and A. Frindell, "QPACK: Field
               Compression for HTTP/3", Work in Progress, Internet-Draft,
               draft-ietf-quic-qpack-21, 2 February 2021,
               <https://datatracker.ietf.org/doc/html/draft-ietf-quic-

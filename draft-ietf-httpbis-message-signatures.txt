@@ -5,10 +5,10 @@
 HTTP                                                     A. Backman, Ed.
 Internet-Draft                                                    Amazon
 Intended status: Standards Track                          J. Richer, Ed.
-Expires: 25 March 2023                               Bespoke Engineering
+Expires: 30 March 2023                               Bespoke Engineering
                                                                M. Sporny
                                                           Digital Bazaar
-                                                       21 September 2022
+                                                       26 September 2022
 
 
                         HTTP Message Signatures
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 March 2023.
+   This Internet-Draft will expire on 30 March 2023.
 
 Copyright Notice
 
@@ -141,7 +141,7 @@ Table of Contents
                over HTTP Fields
        7.2.5.  Signature Labels
        7.2.6.  Multiple Signature Confusion
-       7.2.7.  Collision of Application-Specific Signature Context
+       7.2.7.  Collision of Application-Specific Signature Tag
        7.2.8.  Message Content
      7.3.  Cryptographic Considerations
        7.3.1.  Cryptography and Signature Collision
@@ -462,7 +462,7 @@ Table of Contents
       the signature parameters contain a created parameter, while an API
       expecting semantically relevant HTTP message content could require
       the Content-Digest header to be present and covered as well as
-      mandate a value for context that is specific to the API being
+      mandate a value for tag that is specific to the API being
       protected.
 
    *  A means of retrieving the key material used to verify the
@@ -1242,8 +1242,8 @@ Table of Contents
 
    *  keyid: The identifier for the key material as a String value.
 
-   *  context: An application-specific context for the signature as a
-      String value.  This value is used by applications to help identify
+   *  tag: An application-specific tag for the signature as a String
+      value.  This value is used by applications to help identify
       signatures relevant for specific applications or protocols.
 
    Additional parameters can be defined in the HTTP Signature Parameters
@@ -1848,7 +1848,7 @@ Table of Contents
 
    *  Enforcing uniqueness of the nonce parameter.
 
-   *  Requiring an application-specific value for the context parameter.
+   *  Requiring an application-specific value for the tag parameter.
 
    Application-specific requirements are expected and encouraged.  When
    an application defines additional requirements, it MUST enforce them
@@ -2561,8 +2561,8 @@ Table of Contents
         | nonce   | A single-use nonce value      | Section 2.3   |
         |         |                               | of RFC nnnn   |
         +---------+-------------------------------+---------------+
-        | context | An application-specific       | Section 2.3   |
-        |         | context for a signature       | of RFC nnnn   |
+        | tag     | An application-specific tag   | Section 2.3   |
+        |         | for a signature               | of RFC nnnn   |
         +---------+-------------------------------+---------------+
 
               Table 2: Initial contents of the HTTP Signature
@@ -2917,9 +2917,9 @@ Table of Contents
    present, and applications should not put semantic meaning on the
    labels themselves.  Instead, additional signature parameters can be
    used to convey whatever additional meaning is required to be attached
-   to and covered by the signature.  In particular, the context
-   parameter can be used to define an application-specific value as
-   described in Section 7.2.7.
+   to and covered by the signature.  In particular, the tag parameter
+   can be used to define an application-specific value as described in
+   Section 7.2.7.
 
 7.2.6.  Multiple Signature Confusion
 
@@ -2945,7 +2945,7 @@ Table of Contents
    attacker could use this to deny service to otherwise valid messages
    by injecting invalid signatures alongside the valid ones.
 
-7.2.7.  Collision of Application-Specific Signature Context
+7.2.7.  Collision of Application-Specific Signature Tag
 
    Multiple applications and protocols could apply HTTP signatures on
    the same message simultaneously.  In fact, this is a desired feature
@@ -2954,18 +2954,18 @@ Table of Contents
    accepting or rejecting a message based on an unrelated or irrelevant
    signature.  In order to help an application select which signatures
    apply to its own processing, the application can declare a specific
-   value for the context signature parameter as defined in Section 2.3.
-   For example, a signature targeting an application gateway could
-   require context="app-gateway" as part of the signature parameters for
-   that application.
+   value for the tag signature parameter as defined in Section 2.3.  For
+   example, a signature targeting an application gateway could require
+   tag="app-gateway" as part of the signature parameters for that
+   application.
 
-   The use of the context parameter does not prevent an attacker from
-   also using the same value as a target application, since the
-   parameter's value is public and otherwise unrestricted.  As a
-   consequence, a verifier should only use value of the context
-   parameter to limit which signatures to check.  Each signature still
-   needs to be examined by the verifier to ensure that sufficient
-   coverage is provided, as discussed in Section 7.2.1.
+   The use of the tag parameter does not prevent an attacker from also
+   using the same value as a target application, since the parameter's
+   value is public and otherwise unrestricted.  As a consequence, a
+   verifier should only use value of the tag parameter to limit which
+   signatures to check.  Each signature still needs to be examined by
+   the verifier to ensure that sufficient coverage is provided, as
+   discussed in Section 7.2.1.
 
 7.2.8.  Message Content
 
@@ -3877,8 +3877,8 @@ B.2.2.  Selective Covered Components using rsa-pss-sha512
    This example covers additional components (the authority, the
    Content-Digest header field, and a single named query parameter) in
    test-request using the rsa-pss-sha512 algorithm.  This example also
-   adds a context parameter with the application-specific value of
-   header-example.
+   adds a tag parameter with the application-specific value of header-
+   example.
 
    The corresponding signature base is:
 
@@ -3891,7 +3891,7 @@ B.2.2.  Selective Covered Components using rsa-pss-sha512
    "@signature-params": ("@authority" "content-digest" \
      "@query-param";name="Pet")\
      ;created=1618884473;keyid="test-key-rsa-pss"\
-     ;context="header-example"
+     ;tag="header-example"
 
    This results in the following Signature-Input and Signature headers
    being added to the message under the label sig-b22:
@@ -3900,13 +3900,13 @@ B.2.2.  Selective Covered Components using rsa-pss-sha512
 
    Signature-Input: sig-b22=("@authority" "content-digest" \
      "@query-param";name="Pet");created=1618884473\
-     ;keyid="test-key-rsa-pss";context="header-example"
-   Signature: sig-b22=:SW3AKyCPY7PQSARlOEg8+tb43JD4uYGBrt6G+RWKgrOZ9ZJ\
-     Wq8VnVM1qTcdjChi6HGZI4xDwKZteoQH8mj2HT1cWdUTxu2JaUvcJDINpa0m20NYy\
-     wRu/HLXmh/FfeefGIUpkAneT/X/sWL/ShiTtp7REtxdJaiLCjQidY9eUpFmBXPMdR\
-     /FiYI3hGWarGGiGmTpgbjI713ywhKoGPm7Q8lpfhz5T59tOsZVPxlqdpwPD0RVGOw\
-     ZMzI5VzoY4YaGrB2fqvPOxNUNuh5bveYQOYAmzmpDaLfgkQB/C4AHzKWAYs9yV6Wf\
-     78u4en7AP1Y+iM0G6MviZvX1/lcgC2n1bDg==:
+     ;keyid="test-key-rsa-pss";tag="header-example"
+   Signature: sig-b22=:LjbtqUbfmvjj5C5kr1Ugj4PmLYvx9wVjZvD9GsTT4F7GrcQ\
+     EdJzgI9qHxICagShLRiLMlAJjtq6N4CDfKtjvuJyE5qH7KT8UCMkSowOB4+ECxCmT\
+     8rtAmj/0PIXxi0A0nxKyB09RNrCQibbUjsLS/2YyFYXEu4TRJQzRw1rLEuEfY17SA\
+     RYhpTlaqwZVtR8NV7+4UKkjqpcAoFqWFQh62s7Cl+H2fjBSpqfZUJcsIk4N6wiKYd\
+     4je2U/lankenQ99PZfB4jY3I5rSV2DSBVkSFsURIjYErOs0tFTQosMTAoxk//0RoK\
+     UqiYY8Bh0aaUEb0rQl3/XaVe4bXTugEjHSw==:
 
    Note that the RSA PSS algorithm in use here is non-deterministic,
    meaning a different signature value will be created every time the
@@ -4313,6 +4313,10 @@ Document History
    _RFC EDITOR: please remove this section before publication_
 
    *  draft-ietf-httpbis-message-signatures
+
+      -  -13
+
+         o  Renamed "context" parameter to "tag"
 
       -  -12
 
